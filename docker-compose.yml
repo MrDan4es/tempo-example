@@ -1,0 +1,50 @@
+services:
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.app-service.loadbalancer.server.port=80"
+      - "traefik.http.routers.http-app.rule=Host(`localhost`)"
+      - "traefik.http.routers.http-app.entrypoints=http"
+
+  traefik:
+    image: traefik:3.1.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/traefik.yml:ro
+    ports:
+      - "80:80"
+      - "8080:8080"
+    labels:
+      - "logging=promtail"
+      - "logging_jobname=containerlogs"
+      - "logging_job=traefik"
+
+  loki:
+    image: grafana/loki:3.1.0
+
+  promtail:
+    image: grafana/promtail:3.1.0
+    volumes:
+      - ./promtail.yml:/etc/promtail/promtail.yml
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command:
+      - "--config.file=/etc/promtail/promtail.yml"
+
+  tempo:
+    image: grafana/tempo:2.5.0
+    command: 
+      - -config.file=/etc/tempo/tempo.yml
+      - -target=all
+      - -auth.enabled=false
+    volumes:
+      - ./tempo.yml:/etc/tempo/tempo.yml:ro
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    ports:
+      - "3000:3000"
