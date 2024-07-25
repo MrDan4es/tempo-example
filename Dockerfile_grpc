@@ -8,6 +8,6 @@ RUN go mod download
 
 COPY ./ ./
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /server ./cmd/server.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o /server ./cmd/grpc/server.go
 
 CMD [ "/server" ]

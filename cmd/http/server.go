@@ -41,7 +41,7 @@ func newTraceProvider(ctx context.Context) (*trace.TracerProvider, error) {
 	}
 
 	traceRes, err := resource.New(ctx,
-		resource.WithAttributes(semconv.ServiceNameKey.String("APP")),
+		resource.WithAttributes(semconv.ServiceNameKey.String("APP_HTTP")),
 	)
 	if err != nil {
 		return nil, err

@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package api.v1;
+
+option go_package = "github.com/mrdan4es/tempo-example/pkg/api/v1;apipb";
+
+service TestService {
+    rpc SayHello(SayHelloRequest) returns (SayHelloResponse) {}
+
+    rpc Register(RegisterRequest) returns (User) {}
+}
+
+message RegisterRequest {}
+
+message User {
+    int64 id = 1;
+    string username = 2;
+}
+
+message SayHelloRequest {
+    string name = 1;
+}
+
+message SayHelloResponse {
+    string text = 1;
+}

@@ -1,20 +1,27 @@
 services:
 
-  app:
+  app_http:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile_http
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.app-service.loadbalancer.server.port=80"
-      - "traefik.http.routers.http-app.rule=Host(`localhost`)"
+      - "traefik.http.routers.http-app.rule=Host(`localhost`) && !PathPrefix(`/api.`)"
       - "traefik.http.routers.http-app.entrypoints=http"
+
+  app_grpc:
+    build:
+      context: .
+      dockerfile: Dockerfile_grpc
+    depends_on:
+      - postgres
 
   traefik:
     image: traefik:3.1.0
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik.yml:/traefik.yml:ro
+      - ./third_party/traefik.yml:/traefik.yml:ro
     ports:
       - "80:80"
       - "8080:8080"
@@ -23,13 +30,36 @@ services:
       - "logging_jobname=containerlogs"
       - "logging_job=traefik"
 
+  envoy:
+    image: envoyproxy/envoy:distroless-v1.31.0
+    volumes:
+      - ./third_party/envoy.yml:/etc/envoy/envoy.yaml:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.envoy-service.loadbalancer.server.port=8080"
+      - "traefik.http.routers.http-envoy.rule=Host(`localhost`) && PathPrefix(`/api.`)"
+      - "traefik.http.routers.http-envoy.entrypoints=http"
+
+  postgres:
+    image: postgres:16.3-alpine3.20
+    healthcheck:
+      test: "pg_isready -d postgres -U $$POSTGRES_USER"
+      interval: 1s
+      timeout: 3s
+      retries: 10
+    environment:
+      - POSTGRES_DB=test
+      - POSTGRES_USER=test
+      - POSTGRES_PASSWORD=test
+      - PGDATA=/var/lib/postgresql/data/pgdata
+
   loki:
     image: grafana/loki:3.1.0
 
   promtail:
     image: grafana/promtail:3.1.0
     volumes:
-      - ./promtail.yml:/etc/promtail/promtail.yml
+      - ./third_party/promtail.yml:/etc/promtail/promtail.yml
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock
     command:
@@ -42,7 +72,7 @@ services:
       - -target=all
       - -auth.enabled=false
     volumes:
-      - ./tempo.yml:/etc/tempo/tempo.yml:ro
+      - ./third_party/tempo.yml:/etc/tempo/tempo.yml:ro
 
   grafana:
     image: grafana/grafana:11.1.0
